@@ -18,5 +18,5 @@ phases:
     - echo Writing image definitions file...
     - printf '[{"name":"ShiftEmotionSpotifyIntegration","imageUri":"%s"}]' $REPO_URI > imagedefinitions.json
     - cat imagedefinitions.json
-    artifacts:
-        files: imagedefinitions.json
+artifacts:
+    files: imagedefinitions.json
