@@ -7,7 +7,7 @@ func main() {
 	
 	r.GET("/", func(c *gin.Context){
 
-		c.String(200, "Servicio Levantado utilizando AWS codepipeline", nil)
+		c.String(200, "Servicio Levantado utilizando AWS codepipeline!", nil)
 
 	})
 
