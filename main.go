@@ -1,19 +1,16 @@
-package main 
+package main
 
-import "github.com/gin-gonic/gin" 
+import "github.com/gin-gonic/gin"
 
 func main() {
-	r := gin.Default() 
-	
-	r.GET("/", func(c *gin.Context){
+	r := gin.Default()
 
-		c.String(200, "Servicio Levantado utilizando AWS codepipeline!", nil)
+	r.GET("/", func(c *gin.Context) {
+
+		c.String(200, "Servicio Levantado utilizando AWS codepipeline! (Ah perroooooooooooooooooooo!)", nil)
 
 	})
 
-	r.Run(":3000") 
+	r.Run(":3000")
 
 }
-
-
-
