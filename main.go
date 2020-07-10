@@ -6,7 +6,7 @@ func main() {
 	r := gin.Default() 
 	
 	r.GET("/", func(c *gin.Context){
-		c.String(200, "Servicio Levantado", nil)
+		c.String(200, "Servicio Levantado con cicd", nil)
 	})
 
 	r.Run(":3000") 
