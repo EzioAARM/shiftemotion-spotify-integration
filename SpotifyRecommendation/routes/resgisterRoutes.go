@@ -2,6 +2,7 @@ package routes
 
 import (
 	"../awsFunctions"
+	"../songRecommendation"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -40,10 +41,22 @@ func RegisterRoutes() *gin.Engine {
 			})
 			return
 		}
+		// TODO Call the Spotify API and return the list of songs
+
 		c.JSON(http.StatusOK, gin.H{
 			"emotion": emotion,
 		})
 
+	})
+
+	r.GET("/fetch", func(c *gin.Context) {
+		token := ""
+
+		songRecommendation.FetchSongs("SAD", token)
+
+		c.JSON(200, gin.H{
+			"Status": "Todo Bien",
+		})
 	})
 
 	return r
