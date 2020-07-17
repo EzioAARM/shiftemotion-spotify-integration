@@ -9,7 +9,17 @@ import (
 	"time"
 )
 
-func FetchSongs(emotion, token string) ([]string, error) {
+type pagingObject struct {
+	href     string               `json:"href"`
+	items    []spotify.FullArtist `json:"items"`
+	limit    int                  `json:"limit"`
+	next     string               `json:"next"`
+	offset   int                  `json:"offset"`
+	previous string               `json:"previous"`
+	total    int                  `json:"total"`
+}
+
+func FetchSongs(emotion, token string) ([]pagingObject, error) {
 	// get a mood
 	//spotifyMood := defineMood(emotion)
 	topArtists, err := fetchTopArtist(token)
@@ -45,23 +55,27 @@ func defineMood(mood string) float64 {
 	}
 }
 
-func fetchTopArtist(token string) ([]spotify.FullArtist, error) {
-	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/artist?time_range=short_term&limit=10&offset=0", nil)
+func fetchTopArtist(token string) (pagingObject, error) {
+	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=10&offset=0", nil)
 	if err != nil {
-		return nil, err
+		return pagingObject{}, err
 	}
 	request.Header.Set("Authorization", "Bearer "+token)
 	client := &http.Client{Timeout: time.Second * 10}
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, errors.New("Error getting response " + err.Error())
+		return pagingObject{}, errors.New("Error getting response " + err.Error())
 	}
-	defer response.Body.Close()
+
 	// parse the request
 	decoder := json.NewDecoder(response.Body)
+	defer response.Body.Close()
 	// export the json
-	var topArtists []spotify.FullArtist
-	err = decoder.Decode(topArtists)
+	var topArtists pagingObject
+	err = decoder.Decode(&topArtists)
+	if err != nil {
+		return pagingObject{}, err
+	}
 
 	return topArtists, nil
 }

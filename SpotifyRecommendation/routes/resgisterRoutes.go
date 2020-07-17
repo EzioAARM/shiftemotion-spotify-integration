@@ -52,8 +52,13 @@ func RegisterRoutes() *gin.Engine {
 	r.GET("/fetch", func(c *gin.Context) {
 		token := ""
 
-		songRecommendation.FetchSongs("SAD", token)
-
+		artists, err := songRecommendation.FetchSongs("SAD", token)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err.Error(),
+			})
+		}
+		fmt.Println(artists)
 		c.JSON(200, gin.H{
 			"Status": "Todo Bien",
 		})
