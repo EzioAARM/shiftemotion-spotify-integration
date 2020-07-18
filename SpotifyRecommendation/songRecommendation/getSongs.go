@@ -16,9 +16,28 @@ type tracks struct {
 	Name string `json:"name"`
 }
 
+type recommendedTracks struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Artist []struct {
+		Name string `json:"name"`
+	} `json:"artists"`
+}
+
 type tracksArray struct {
 	Items []tracks `json:"items"`
 }
+
+type recommendations struct {
+	Items []recommendedTracks `json:"tracks"`
+}
+
+/*
+type outputTrack struct {
+	Name 		string	`json:"name"`
+	Artists 	string 	`json:"artists"`
+	Id			string 	`json:"id"`
+}*/
 
 type token struct {
 	Access string `json:"access_token"`
@@ -29,18 +48,18 @@ type requestInput struct {
 	Token string `url:"refresh_token" `
 }
 
-func FetchSongs(emotion, email string) (tracksArray, error) {
+func FetchSongs(emotion, email string) ([]awsFunctions.OutputTrack, error) {
 	// get the user token
 	token, err := retrieveToken(email)
 	if err != nil {
-		return tracksArray{}, err
+		return nil, err
 	}
 
 	// get a mood
 	spotifyMood := defineMood(emotion)
 	topArtists, err := fetchTopTracks(token)
 	if err != nil {
-		return tracksArray{}, err
+		return nil, err
 	}
 	// get the key ids from the tracks
 	var ids []string
@@ -49,8 +68,26 @@ func FetchSongs(emotion, email string) (tracksArray, error) {
 	}
 	// now that I have the Ids, generate recommendations based on them
 	retrievedTracks, err := getRecommendations(ids, fmt.Sprintf("%.2f", spotifyMood), token)
+	if err != nil {
+		return nil, err
+	}
+	// assemble the output
+	var output []awsFunctions.OutputTrack
+	for _, item := range retrievedTracks.Items {
+		// Get the list of artist
+		names := ""
+		for _, art := range item.Artist {
+			names += art.Name + ", "
+		}
 
-	return retrievedTracks, nil
+		output = append(output, awsFunctions.OutputTrack{
+			Name:    item.Name,
+			Artists: names,
+			Id:      item.ID,
+		})
+	}
+
+	return output, nil
 }
 
 // Function to convert an emotion from rekognition to a float value spotify can use
@@ -162,11 +199,12 @@ func retrieveToken(email string) (string, error) {
 
 // Private method to retrieve recommended songs from spotify
 // depending on the seed songs entered
-func getRecommendations(ids []string, mood, token string) (tracksArray, error) {
+func getRecommendations(ids []string, mood, token string) (recommendations, error) {
 	// generate the request to spotify
-	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/recommendations?limit=10&market=ES&seed_genres=rock%2Cpop%2Creggaeton&seed_tracks="+ids[0]+"%"+ids[1]+"&target_valence="+mood, nil)
+	apiRoute := "https://api.spotify.com/v1/recommendations?limit=20&market=ES&seed_genres=rock%2Cpop%2Creggaeton&seed_tracks=" + strings.Trim(ids[0], " ") + "%2C" + ids[1] + "&target_valence=" + mood
+	request, err := http.NewRequest("GET", apiRoute, nil)
 	if err != nil {
-		return tracksArray{}, err
+		return recommendations{}, err
 	}
 
 	request.Header.Set("Authorization", "Bearer "+token)
@@ -178,19 +216,19 @@ func getRecommendations(ids []string, mood, token string) (tracksArray, error) {
 	}
 	response, err := client.Do(request)
 	if err != nil {
-		return tracksArray{}, err
+		return recommendations{}, err
 	}
 
 	defer response.Body.Close()
-	var retrievedTracks tracksArray
+	var retrievedTracks recommendations
 	parsedBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return tracksArray{}, err
+		return recommendations{}, err
 	}
 
 	err = json.Unmarshal(parsedBody, &retrievedTracks)
 	if err != nil {
-		return tracksArray{}, nil
+		return recommendations{}, nil
 	}
 
 	fmt.Println("**********************************************************")
