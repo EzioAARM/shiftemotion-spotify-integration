@@ -73,6 +73,7 @@ func RegisterRoutes() *gin.Engine {
 		c.JSON(200, gin.H{
 			"tracks":     tracks,
 			"statusCode": http.StatusOK,
+			"emotion":    emotion,
 		})
 
 	})
