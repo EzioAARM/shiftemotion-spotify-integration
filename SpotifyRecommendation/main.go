@@ -11,3 +11,5 @@ func main() {
 
 	r.Run(":3000")
 }
+
+// Comment this function before pushing and getting in production
