@@ -1,33 +1,48 @@
 package songRecommendation
 
 import (
+	"../awsFunctions"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/zmb3/spotify"
+	"github.com/google/go-querystring/query"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
-type pagingObject struct {
-	href     string               `json:"href"`
-	items    []spotify.FullArtist `json:"items"`
-	limit    int                  `json:"limit"`
-	next     string               `json:"next"`
-	offset   int                  `json:"offset"`
-	previous string               `json:"previous"`
-	total    int                  `json:"total"`
+type tracks struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
-func FetchSongs(emotion, token string) ([]pagingObject, error) {
+type tracksArray struct {
+	Items []tracks `json:"items"`
+}
+
+type token struct {
+	Access string `json:"access_token"`
+}
+
+type requestInput struct {
+	Type  string `url:"grant_type"`
+	Token string `url:"refresh_token" `
+}
+
+func FetchSongs(emotion, email string) (tracksArray, error) {
+	// get the user token
+	token, err := retrieveToken(email)
+	if err != nil {
+		return tracksArray{}, err
+	}
 	// get a mood
 	//spotifyMood := defineMood(emotion)
-	topArtists, err := fetchTopArtist(token)
+	topArtists, err := fetchTopTracks(token)
 	if err != nil {
-		return nil, err
+		return tracksArray{}, err
 	}
 	fmt.Print(topArtists)
-	return nil, nil
+	return tracksArray{}, nil
 }
 
 // Function to convert an emotion from rekognition to a float value spotify can use
@@ -55,27 +70,83 @@ func defineMood(mood string) float64 {
 	}
 }
 
-func fetchTopArtist(token string) (pagingObject, error) {
-	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=10&offset=0", nil)
+// Private function
+func fetchTopTracks(token string) (tracksArray, error) {
+	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=10&offset=0", nil)
 	if err != nil {
-		return pagingObject{}, err
+		return tracksArray{}, err
 	}
+
 	request.Header.Set("Authorization", "Bearer "+token)
-	client := &http.Client{Timeout: time.Second * 10}
+	request.Header.Set("Content-type", "application/json")
+	request.Header.Set("Accept", "application/json")
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
 	response, err := client.Do(request)
 	if err != nil {
-		return pagingObject{}, errors.New("Error getting response " + err.Error())
+		return tracksArray{}, err
 	}
 
-	// parse the request
-	decoder := json.NewDecoder(response.Body)
 	defer response.Body.Close()
-	// export the json
-	var topArtists pagingObject
-	err = decoder.Decode(&topArtists)
+	var retrievedTracks tracksArray
+	parsedBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return pagingObject{}, err
+		return tracksArray{}, err
 	}
 
-	return topArtists, nil
+	err = json.Unmarshal(parsedBody, &retrievedTracks)
+	if err != nil {
+		return tracksArray{}, nil
+	}
+
+	fmt.Println(retrievedTracks)
+	return retrievedTracks, nil
+}
+
+// Private function to retrieve a new session token for the user for the current operation
+func retrieveToken(email string) (string, error) {
+	// get the refresh token
+	refreshToken, err := awsFunctions.FetchRefresh(email)
+	if err != nil {
+		return "", err
+	}
+	appSecret := "Zjk0MGQ2MTk4OGE2NDg0ZmJkY2M5OGE1OTZkNDc5ZWM6OGZiMzA1ZjA3NzIzNGZhMjhmNjI5YThlYjFmMTI4MmQ="
+	// Begin the process of retrieving a new access token
+	var access token
+	data := requestInput{
+		Type:  "refresh_token",
+		Token: refreshToken,
+	}
+	opt, _ := query.Values(data)
+	// make the request
+	requestToken, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(opt.Encode()))
+	if err != nil {
+		return "", err
+	}
+	requestToken.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	requestToken.Header.Set("Authorization", "Basic "+appSecret)
+
+	client := &http.Client{Timeout: time.Second * 10}
+
+	response, err := client.Do(requestToken)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	parsedBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// lastly, parse the token
+	err = json.Unmarshal([]byte(parsedBody), &access)
+	if err != nil {
+		return "", err
+	}
+
+	// everything is okay
+	return access.Access, nil
 }

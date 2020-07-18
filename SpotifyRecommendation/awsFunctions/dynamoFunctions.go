@@ -19,6 +19,11 @@ type photo struct {
 	Emotion     string
 }
 
+type refresh struct {
+	ID    string `json:"id"`
+	Token string `json:"token" `
+}
+
 func InsertItem(userId, pictureCode, emotion string) error {
 	// Initialize a session
 	awsRegion := os.Getenv("REGION")
@@ -62,4 +67,36 @@ func InsertItem(userId, pictureCode, emotion string) error {
 	}
 
 	return nil
+}
+
+func FetchRefresh(email string) (string, error) {
+	// Initialize a session
+	awsRegion := "us-east-1"
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{Region: aws.String(awsRegion),
+			Credentials: credentials.NewEnvCredentials()},
+		Profile: "",
+	}))
+	// create a new dynamoDB Client
+	db := dynamodb.New(sess)
+
+	input := &dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(email),
+			},
+		},
+		TableName: aws.String("PasswordsTokens"),
+	}
+
+	result, err := db.GetItem(input)
+	if err != nil {
+		return "", err
+	}
+
+	var resultToken refresh
+	dynamodbattribute.UnmarshalMap(result.Item, &resultToken)
+
+	return resultToken.Token, nil
+
 }
