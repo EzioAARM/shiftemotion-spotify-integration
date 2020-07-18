@@ -6,17 +6,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/sony/sonyflake"
 	"log"
 	"os"
-	"strconv"
+	"time"
 )
 
 type photo struct {
-	ID          string
-	UserID      string
-	PictureCode string
-	Emotion     string
+	ID          int32  `json:"id"`
+	UserID      string `json:"user_id"`
+	PictureCode string `json:"picture_code"`
+	Emotion     string `json:"emotion"`
 }
 
 type refresh struct {
@@ -35,15 +34,9 @@ func InsertItem(userId, pictureCode, emotion string) error {
 	// create a new dynamoDB Client
 	db := dynamodb.New(sess)
 	tableName := "HistorialFotosEmociones"
-	// create random ID
-	flake := sonyflake.NewSonyflake(sonyflake.Settings{})
-	id, err := flake.NextID()
-	if err != nil {
-		return err
-	}
 
 	item := photo{
-		ID:          strconv.FormatUint(id, 10),
+		ID:          int32(time.Now().Unix()),
 		UserID:      userId,
 		PictureCode: pictureCode,
 		Emotion:     emotion,

@@ -44,7 +44,7 @@ func UploadFile(c *gin.Context) (string, error) {
 	fileName, err := uploadFileToS3(s, file, fileHeader)
 	if err != nil {
 		log.Println(err)
-		return "", errors.New("Error uploading the file to S3")
+		return "", err
 	}
 	fmt.Println("File Successfully Uploaded: ", fileName)
 
