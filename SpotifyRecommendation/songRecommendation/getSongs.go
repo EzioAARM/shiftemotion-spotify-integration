@@ -35,6 +35,7 @@ func FetchSongs(emotion, email string) (tracksArray, error) {
 	if err != nil {
 		return tracksArray{}, err
 	}
+
 	// get a mood
 	//spotifyMood := defineMood(emotion)
 	topArtists, err := fetchTopTracks(token)
@@ -42,6 +43,14 @@ func FetchSongs(emotion, email string) (tracksArray, error) {
 		return tracksArray{}, err
 	}
 	fmt.Print(topArtists)
+	// get the key ids from the tracks
+	var ids []string
+	for _, item := range topArtists.Items {
+		ids = append(ids, item.ID)
+	}
+
+	fmt.Println(ids)
+
 	return tracksArray{}, nil
 }
 
@@ -70,7 +79,8 @@ func defineMood(mood string) float64 {
 	}
 }
 
-// Private function
+// Private function to fetch the user's top tracks
+// to use them as seeds for recommendations
 func fetchTopTracks(token string) (tracksArray, error) {
 	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=10&offset=0", nil)
 	if err != nil {

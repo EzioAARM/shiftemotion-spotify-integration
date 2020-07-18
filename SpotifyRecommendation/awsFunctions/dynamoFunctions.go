@@ -71,7 +71,7 @@ func InsertItem(userId, pictureCode, emotion string) error {
 
 func FetchRefresh(email string) (string, error) {
 	// Initialize a session
-	awsRegion := "us-east-1"
+	awsRegion := os.Getenv("REGION")
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{Region: aws.String(awsRegion),
 			Credentials: credentials.NewEnvCredentials()},
