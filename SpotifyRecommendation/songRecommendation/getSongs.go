@@ -37,21 +37,20 @@ func FetchSongs(emotion, email string) (tracksArray, error) {
 	}
 
 	// get a mood
-	//spotifyMood := defineMood(emotion)
+	spotifyMood := defineMood(emotion)
 	topArtists, err := fetchTopTracks(token)
 	if err != nil {
 		return tracksArray{}, err
 	}
-	fmt.Print(topArtists)
 	// get the key ids from the tracks
 	var ids []string
 	for _, item := range topArtists.Items {
 		ids = append(ids, item.ID)
 	}
+	// now that I have the Ids, generate recommendations based on them
+	retrievedTracks, err := getRecommendations(ids, fmt.Sprintf("%.2f", spotifyMood), token)
 
-	fmt.Println(ids)
-
-	return tracksArray{}, nil
+	return retrievedTracks, nil
 }
 
 // Function to convert an emotion from rekognition to a float value spotify can use
@@ -82,7 +81,7 @@ func defineMood(mood string) float64 {
 // Private function to fetch the user's top tracks
 // to use them as seeds for recommendations
 func fetchTopTracks(token string) (tracksArray, error) {
-	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=10&offset=0", nil)
+	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=2&offset=0", nil)
 	if err != nil {
 		return tracksArray{}, err
 	}
@@ -159,4 +158,42 @@ func retrieveToken(email string) (string, error) {
 
 	// everything is okay
 	return access.Access, nil
+}
+
+// Private method to retrieve recommended songs from spotify
+// depending on the seed songs entered
+func getRecommendations(ids []string, mood, token string) (tracksArray, error) {
+	// generate the request to spotify
+	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/recommendations?limit=10&market=ES&seed_genres=rock%2Cpop%2Creggaeton&seed_tracks="+ids[0]+"%"+ids[1]+"&target_valence="+mood, nil)
+	if err != nil {
+		return tracksArray{}, err
+	}
+
+	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set("Content-type", "application/json")
+	request.Header.Set("Accept", "application/json")
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return tracksArray{}, err
+	}
+
+	defer response.Body.Close()
+	var retrievedTracks tracksArray
+	parsedBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return tracksArray{}, err
+	}
+
+	err = json.Unmarshal(parsedBody, &retrievedTracks)
+	if err != nil {
+		return tracksArray{}, nil
+	}
+
+	fmt.Println("**********************************************************")
+	fmt.Println(retrievedTracks)
+	return retrievedTracks, nil
 }
