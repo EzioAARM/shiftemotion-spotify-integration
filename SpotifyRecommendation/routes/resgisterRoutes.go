@@ -56,10 +56,23 @@ func RegisterRoutes() *gin.Engine {
 			})
 			return
 		}
-		// TODO Call the Spotify API and return the list of songs
-
-		c.JSON(http.StatusOK, gin.H{
-			"emotion": emotion,
+		// Call the Spotify API and return the list of songs
+		tracks, err := songRecommendation.FetchSongs(emotion, userID)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err.Error(),
+			})
+		}
+		fmt.Println(tracks)
+		err = awsFunctions.InsertSongRecommendation(tracks, userID, fileName)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": err.Error(),
+			})
+		}
+		c.JSON(200, gin.H{
+			"tracks":     tracks,
+			"statusCode": http.StatusOK,
 		})
 
 	})
@@ -68,15 +81,22 @@ func RegisterRoutes() *gin.Engine {
 		values := c.Request.URL.Query()
 		email := values["email"][0]
 
-		artists, err := songRecommendation.FetchSongs("SAD", email)
+		tracks, err := songRecommendation.FetchSongs("SAD", email)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err.Error(),
+			})
+		}
+		fmt.Println(tracks)
+		err = awsFunctions.InsertSongRecommendation(tracks, "luisfer.marroquin@hotmail.com", "pictures/Simon")
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": err.Error(),
 			})
 		}
-		fmt.Println(artists)
 		c.JSON(200, gin.H{
-			"Status": "Todo Bien",
+			"tracks":     tracks,
+			"statusCode": http.StatusOK,
 		})
 	})
 
